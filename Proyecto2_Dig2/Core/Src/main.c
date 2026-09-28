@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,6 +46,7 @@ I2C_HandleTypeDef hi2c1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+
 
 /* USER CODE END PV */
 
@@ -97,7 +99,7 @@ int main(void)
   char menu[] =
         "\r\nMENU PRINCIPAL\r\n"
         "Controlar dispositivo SPI presione: 1\r\n"
-        "Para Obtener medición de sensor I2C presione: 2\r\n"
+        "Para Obtener medicion de sensor I2C presione: 2\r\n"
         "Seleccione una opcion: ";
 
     HAL_UART_Transmit(&huart2, (uint8_t *)menu, strlen(menu), HAL_MAX_DELAY);
@@ -133,13 +135,29 @@ int main(void)
             if (estado == HAL_OK)
             {
                 char texto[] = "\r\nESP32 detectado por I2C\r\n";
-
                 HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
+
+                uint8_t datos[2];
+                uint16_t valorRecibido;
+                char mensaje[50];
+
+                estado = HAL_I2C_Master_Receive(&hi2c1, 0x28 << 1, datos, 2, 100);
+
+                if (estado == HAL_OK)
+                {
+                    valorRecibido = ((uint16_t)datos[0] << 8) | datos[1];
+                    snprintf(mensaje, sizeof(mensaje), "\r\nValor recibido: %u\r\n", valorRecibido);
+                    HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY);
+                }
+                else
+                {
+                    char error[] = "\r\nError al recibir los datos del ESP32\r\n";
+                    HAL_UART_Transmit(&huart2, (uint8_t *)error, strlen(error), HAL_MAX_DELAY);
+                }
             }
             else
             {
                 char texto[] = "\r\nNo se detecto el ESP32\r\n";
-
                 HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
             }
         }
