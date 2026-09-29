@@ -129,36 +129,28 @@ int main(void)
             HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
 
             HAL_StatusTypeDef estado;
+            uint8_t datos[4] = {0, 0, 0, 0};
+            uint16_t adcRecibido;
+            uint16_t milivoltiosRecibidos;
+            char mensaje[100];
 
-            estado = HAL_I2C_IsDeviceReady(&hi2c1, 0x28 << 1, 3, 100);
+            estado = HAL_I2C_Master_Receive(&hi2c1, 0x28 << 1, datos, 4, 100);
 
             if (estado == HAL_OK)
             {
-                char texto[] = "\r\nESP32 detectado por I2C\r\n";
-                HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
+            	adcRecibido = ((uint16_t)datos[0] << 8) | datos[1];
+            	milivoltiosRecibidos = ((uint16_t)datos[2] << 8) | datos[3];
 
-                uint8_t datos[2];
-                uint16_t valorRecibido;
-                char mensaje[50];
+            	snprintf(mensaje, sizeof(mensaje), "\r\nADC: %u bits\r\nVoltaje: %u.%03u V\r\n",
+            			(unsigned int)adcRecibido, (unsigned int)(milivoltiosRecibidos / 1000),
+						(unsigned int)(milivoltiosRecibidos % 1000));
+                HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY);
 
-                estado = HAL_I2C_Master_Receive(&hi2c1, 0x28 << 1, datos, 2, 100);
-
-                if (estado == HAL_OK)
-                {
-                    valorRecibido = ((uint16_t)datos[0] << 8) | datos[1];
-                    snprintf(mensaje, sizeof(mensaje), "\r\nValor recibido: %u\r\n", valorRecibido);
-                    HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY);
-                }
-                else
-                {
-                    char error[] = "\r\nError al recibir los datos del ESP32\r\n";
-                    HAL_UART_Transmit(&huart2, (uint8_t *)error, strlen(error), HAL_MAX_DELAY);
-                }
             }
             else
             {
-                char texto[] = "\r\nNo se detecto el ESP32\r\n";
-                HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
+            	snprintf(mensaje, sizeof(mensaje), "\r\nError al recibir datos. Codigo I2C: %lu\r\n", HAL_I2C_GetError(&hi2c1));
+                HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY);
             }
         }
         else
