@@ -1,0 +1,14 @@
+../Core/Src/main.c:86:5:main	32	static
+../Core/Src/main.c:148:6:SystemClock_Config	88	static
+../Core/Src/main.c:196:13:MX_SPI1_Init	8	static
+../Core/Src/main.c:234:13:MX_TIM2_Init	64	static
+../Core/Src/main.c:294:13:MX_USART2_UART_Init	8	static
+../Core/Src/main.c:327:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:364:13:UART_Print	16	static
+../Core/Src/main.c:370:13:UART_ReadLine	24	static
+../Core/Src/main.c:402:13:Mostrar_Menu	8	static
+../Core/Src/main.c:410:16:Parse_Comando	32	static
+../Core/Src/main.c:453:26:SPI_Enviar_Comando	40	static
+../Core/Src/main.c:469:13:Senal_Actualizar	16	static
+../Core/Src/main.c:479:13:Submenu_SPI	104	static
+../Core/Src/main.c:528:6:Error_Handler	4	static,ignoring_inline_asm

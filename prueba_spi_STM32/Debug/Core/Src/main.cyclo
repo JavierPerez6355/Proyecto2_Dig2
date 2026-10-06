@@ -1,0 +1,14 @@
+../Core/Src/main.c:86:5:main	2
+../Core/Src/main.c:148:6:SystemClock_Config	3
+../Core/Src/main.c:196:13:MX_SPI1_Init	2
+../Core/Src/main.c:234:13:MX_TIM2_Init	6
+../Core/Src/main.c:294:13:MX_USART2_UART_Init	2
+../Core/Src/main.c:327:13:MX_GPIO_Init	1
+../Core/Src/main.c:364:13:UART_Print	1
+../Core/Src/main.c:370:13:UART_ReadLine	9
+../Core/Src/main.c:402:13:Mostrar_Menu	1
+../Core/Src/main.c:410:16:Parse_Comando	19
+../Core/Src/main.c:453:26:SPI_Enviar_Comando	1
+../Core/Src/main.c:469:13:Senal_Actualizar	1
+../Core/Src/main.c:479:13:Submenu_SPI	4
+../Core/Src/main.c:528:6:Error_Handler	1
