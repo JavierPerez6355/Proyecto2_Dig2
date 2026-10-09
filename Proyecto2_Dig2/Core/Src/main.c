@@ -91,8 +91,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	uint8_t opcion;
-	char linea[RX_BUF_LEN]; //aqui se guarda lo que se escribe en la terminal
+	char opcion[8];
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -121,31 +120,24 @@ int main(void)
 
   //arranca la señal cuadrada en PA0, inicia con 500 ms alto / 500 ms bajo
   //el timer hace el cambio de estado solo, no ocupa al CPU
-  HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1);
+  if (HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
+  {
+      Error_Handler();
+  }
 
   UART_Print("\r\n=== Proyecto 2 - Digital 2 ===\r\n");
 
-  char menu[] =
-        "\r\nMENU PRINCIPAL\r\n"
-        "Controlar dispositivo SPI presione: 1\r\n"
-        "Para Obtener medicion de sensor I2C presione: 2\r\n"
-        "Seleccione una opcion: ";
-
-    HAL_UART_Transmit(&huart2, (uint8_t *)menu, strlen(menu), HAL_MAX_DELAY);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1)
     {
-        HAL_UART_Receive(&huart2, &opcion, 1, HAL_MAX_DELAY);
+    	Mostrar_Menu();
 
-        if (opcion == '\r' || opcion == '\n')
-        {
-            continue;
-        }
+    	UART_ReadLine(opcion, sizeof(opcion));
 
-        if (opcion == '1')
+        if (strcmp(opcion, "1") == 0)
         {
             char texto[] = "\r\nSeleccionaste controlar SPI\r\n";
 
@@ -153,7 +145,7 @@ int main(void)
 
             Submenu_SPI();
         }
-        else if (opcion == '2')
+        else if (strcmp(opcion, "2") == 0)
         {
             char texto[] = "\r\nSeleccionaste medir sensor I2C\r\n";
 
@@ -337,9 +329,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
+  htim2.Init.Prescaler = 8399;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 4294967295;
+  htim2.Init.Period = 4999;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -361,7 +353,7 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_TIMING;
+  sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -491,7 +483,8 @@ static void UART_ReadLine(char *buf, uint16_t len)
 static void Mostrar_Menu(void)//imprime el menu principal
 {
   UART_Print("\r\n------ MENU PRINCIPAL ------\r\n");
-  UART_Print("1. Control de LEDs (SPI - ESP32) y senal cuadrada\r\n");
+  UART_Print("1. Controlar dispositivo SPI \r\n");
+  UART_Print("2. Obtener medicion del sensor I2C\r\n");
   UART_Print("Seleccione una opcion: ");
 }
 
@@ -589,9 +582,7 @@ static void Submenu_SPI(void)////Pide el compando y lo valida
     }
 
     //parte 5: con el mismo comando se cambia el periodo de la senal cuadrada
-    Senal_Actualizar(tiempo);
-    snprintf(msg, sizeof(msg), "Senal cuadrada: %u ms alto / %u ms bajo\r\n", tiempo, tiempo);
-    UART_Print(msg);
+
 
     if (SPI_Enviar_Comando(led, tiempo) != HAL_OK)
     {
@@ -599,10 +590,13 @@ static void Submenu_SPI(void)////Pide el compando y lo valida
       return;
     }
 
+    Senal_Actualizar(tiempo);
+    snprintf(msg, sizeof(msg), "Senal cuadrada: %u ms alto / %u ms bajo\r\n", tiempo, tiempo);
+    UART_Print(msg);
+
     snprintf(msg, sizeof(msg), "Enviado: LED %u encendido por %u ms...\r\n", led, tiempo);
     UART_Print(msg);
 
-    HAL_Delay(tiempo + 50);                        // espera a que el ESP32 termine
     UART_Print("Operacion finalizada.\r\n");
     return;                                        // regresa al menu principal
   }
