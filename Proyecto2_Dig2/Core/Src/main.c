@@ -17,12 +17,12 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
+#include "main.h" //informacion principal generada por el IDE
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdio.h>
+#include <string.h> //permite trabajar con cadenas de caracteres
+#include <stdio.h> //permite construir textos que incluyen numeros
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -91,7 +91,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	char opcion[8];
+	char opcion[8]; //arreglo para guardar la opcion escrita en el monitor serial
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -122,10 +122,10 @@ int main(void)
   //el timer hace el cambio de estado solo, no ocupa al CPU
   if (HAL_TIM_OC_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
   {
-      Error_Handler();
+      Error_Handler(); //detener el programa en caso de una configuracipn incorrecta
   }
 
-  UART_Print("\r\n=== Proyecto 2 - Digital 2 ===\r\n");
+  UART_Print("\r\n=== Proyecto 2 - Digital 2 ===\r\n"); // \r:regresa el cursor al inicio de la linea, \n: baja a la siguiente linea.
 
   /* USER CODE END 2 */
 
@@ -133,15 +133,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     while (1)
     {
-    	Mostrar_Menu();
+    	Mostrar_Menu(); //imprimir menu principal
 
-    	UART_ReadLine(opcion, sizeof(opcion));
+    	UART_ReadLine(opcion, sizeof(opcion)); //guardar el arreglo escrito en el monitor e indicar su tamaño
 
-        if (strcmp(opcion, "1") == 0)
+        if (strcmp(opcion, "1") == 0) //compara el texto recibido con "1", si son iguales se devuelve 0
         {
             char texto[] = "\r\nSeleccionaste controlar SPI\r\n";
 
-            HAL_UART_Transmit(&huart2,(uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
+            HAL_UART_Transmit(&huart2,(uint8_t *)texto, strlen(texto), HAL_MAX_DELAY); //MAX DELAY indica que puede esperar el tiempo que sea necesario
 
             Submenu_SPI();
         }
@@ -149,34 +149,39 @@ int main(void)
         {
             char texto[] = "\r\nSeleccionaste medir sensor I2C\r\n";
 
-            HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY);
+            HAL_UART_Transmit(&huart2, (uint8_t *)texto, strlen(texto), HAL_MAX_DELAY); //transmitir el texto por USART2, la direccion de sus bytes y su largo
 
-            HAL_StatusTypeDef estado;
-            uint8_t datos[4] = {0, 0, 0, 0};
-            uint16_t adcRecibido;
-            uint16_t milivoltiosRecibidos;
-            char mensaje[100];
+            HAL_StatusTypeDef estado; //Guardar el resultado de la comunicación I2C
+            uint8_t datos[4] = {0, 0, 0, 0}; //Byte alto ADC, bajo ADC, alto mV, bajo mV
+            uint16_t adcRecibido; //Guardar el valor despues de unir los dos primeros Bytes
+            uint16_t milivoltiosRecibidos; //Guardar el valor despues de unir los ultimos dos bytes
+            char mensaje[100]; //Arreglo para construir el texto a mostrar en la terminal
 
-            estado = HAL_I2C_Master_Receive(&hi2c1, 0x28 << 1, datos, 4, 100);
+            estado = HAL_I2C_Master_Receive(&hi2c1, //Utiliza I2C1 para solicitar cuatro bytes al esclavo con dirección 0x28,
+            		0x28 << 1, datos, 4, 100);      //guárdalos en datos y espera como máximo 100 ms
 
-            if (estado == HAL_OK)
+            if (estado == HAL_OK) //Si la recepción de I2C se realizó correctamente...
             {
-            	adcRecibido = ((uint16_t)datos[0] << 8) | datos[1];
-            	milivoltiosRecibidos = ((uint16_t)datos[2] << 8) | datos[3];
+            	adcRecibido = ((uint16_t)datos[0] << 8) | datos[1]; //reconstruir ADC
+            	milivoltiosRecibidos = ((uint16_t)datos[2] << 8) | datos[3]; //reconstruir mV
 
-            	snprintf(mensaje, sizeof(mensaje), "\r\nADC: %u bits\r\nVoltaje: %u.%03u V\r\n",
-            			(unsigned int)adcRecibido, (unsigned int)(milivoltiosRecibidos / 1000),
-						(unsigned int)(milivoltiosRecibidos % 1000));
-                HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY);
+            	snprintf                         //Escribir el texto formateado dentro del arreglo
+						(mensaje,                //arreglo donde se guardará el texto
+						sizeof(mensaje),         //cantidad máxima de espacios (100)
+						"\r\nADC: %u bits\r\nVoltaje: %u.%03u V\r\n",         //%u se reemplaza por un numero entero sin signo
+            			(unsigned int)adcRecibido,                            //remplazar primer %u por el ADC
+						(unsigned int)(milivoltiosRecibidos / 1000),          //remplazar segundo %u por el entero de milivoltios
+						(unsigned int)(milivoltiosRecibidos % 1000));         //remplazar tercer %u por 3 digitos de decimales de milivoltios
+
+                HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY); //Transmitir mensaje al monitor serial
 
             }
-            else
+            else //Si hay un error I2C
             {
-            	snprintf(mensaje, sizeof(mensaje), "\r\nError al recibir datos. Codigo I2C: %lu\r\n", HAL_I2C_GetError(&hi2c1));
-                HAL_UART_Transmit(&huart2, (uint8_t *)mensaje, strlen(mensaje), HAL_MAX_DELAY);
+            	UART_Print("\r\nError al recibir datos\r\n");
             }
         }
-        else
+        else //Si el valor ingresado no es valido
         {
             char texto[] = "\r\nOpcion no valida\r\n";
 
@@ -212,12 +217,12 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLM = 16; //oscilador interno HSI de la nucleo
+  RCC_OscInitStruct.PLL.PLLN = 336; // El reloj principal del sistema funciona a (16MHz/16)*(336/4) = 84MHz
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) //si se falla la configuracion del oscilador...
   {
     Error_Handler();
   }
@@ -228,8 +233,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2; //A 42MHz, Relacionado con I2C1, USART2 y TIM2
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1; //A 84MHz, Relacionado con SPI1
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
@@ -253,15 +258,15 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.ClockSpeed = 100000; //velocidad estandar de I2C (100kHz)
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.OwnAddress1 = 0; //No se le asigna direccion ya que actua como maestro
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE; //direccion doble desactivada
   hi2c1.Init.OwnAddress2 = 0;
   hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
   hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK) //Si no se puede iniciar la configuracion I2C...
   {
     Error_Handler();
   }
@@ -288,18 +293,18 @@ static void MX_SPI1_Init(void)
   /* USER CODE END SPI1_Init 1 */
   /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
-  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Mode = SPI_MODE_MASTER; //Nucleo configurada como maestro SPI
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW; //Si no hay transferencia. CSK permanece en nivel bajo
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; //velocidad SPI  = (84MHz/128) = 656.25kHz
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 10;
-  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  if (HAL_SPI_Init(&hspi1) != HAL_OK) //Si falla la configuracion SPI
   {
     Error_Handler();
   }
@@ -328,6 +333,8 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 1 */
 
   /* USER CODE END TIM2_Init 1 */
+  // TIM2 recibe 84 MHz. El prescaler 8399 genera una cuenta cada 0.1 ms
+  // y el periodo 4999 produce un cambio cada 500 ms.
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 8399;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -338,7 +345,8 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  // TIM2 utiliza el reloj interno del STM32.
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL; //TIM2 utiliza el reloj interno del STM32, no de un pin externo
   if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
@@ -347,12 +355,14 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+  // TIM2 funciona de manera independiente, sin sincronizarse con otros temporizadores.
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  // El canal 1 cambia automáticamente el estado de PA0 cada vez que ocurre la comparación.
   sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
@@ -364,6 +374,7 @@ static void MX_TIM2_Init(void)
   /* USER CODE BEGIN TIM2_Init 2 */
 
   /* USER CODE END TIM2_Init 2 */
+  // Configura físicamente PA0 para funcionar como salida TIM2_CH1.
   HAL_TIM_MspPostInit(&htim2);
 
 }
@@ -441,42 +452,46 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/* Envia un texto por la terminal */
+
+// Envíar una cadena completa al monitor serial mediante USART2.
 static void UART_Print(const char *s)
 {
   HAL_UART_Transmit(&huart2, (uint8_t *)s, strlen(s), HAL_MAX_DELAY);
 }
 
-/* Lee una linea hasta Enter, con eco y soporte de borrar */
-static void UART_ReadLine(char *buf, uint16_t len)
+// Leer una linea hasta Enter, permite borrar y agrega '\0' al final de la cadena.
+static void UART_ReadLine(char *buf, uint16_t len) //direccion de donde se guardara el arreglo y su longitud máxima
 {
-  uint16_t i = 0;
-  uint8_t c;
+  uint16_t i = 0; //posicion donde se guardara el siguiente caracter
+  uint8_t c; //guarda un caracter recibido por UART
 
   while (1)
   {
-    //recibe un caracter a la vez
-    if (HAL_UART_Receive(&huart2, &c, 1, HAL_MAX_DELAY) != HAL_OK) continue;
+    //recibe un caracter a la vez y lo guarda en c
+    if (HAL_UART_Receive(&huart2, &c, 1, HAL_MAX_DELAY) != HAL_OK)
+    	continue; //si ocurre un errro, regresa al principio del while
 
-    //si llega Enter (13 o 10) se termina la lectura
+    //si llega un retorno o salto de linea
     if (c == '\r' || c == '\n')
     {
-      if (i == 0) continue;          // ignora Enter vacio o el \n despues del \r
+      if (i == 0) continue;  //Si i == 0, la línea está vacía y ese Enter se ignora.
       break;
     }
-    if (c == '\b' || c == 127)       // Backspace
+    if (c == '\b' || c == 127)  // Si se detecta un Backspace
     {
-      if (i > 0) { i--; UART_Print("\b \b"); }
+      if (i > 0) { //comprobar que exista al menos un caracter antes de borrar
+    	  i--;  //reducir la posicion una vez
+    	  UART_Print("\b \b"); } //borrar visualmente el caracter de la terminal
       continue;
     }
     //guarda el caracter si todavia hay espacio
-    if (i < len - 1)
+    if (i < len - 1) //comprobar que todavía hay espacio en el arreglo
     {
-      buf[i++] = c;
-      HAL_UART_Transmit(&huart2, &c, 1, HAL_MAX_DELAY);   // eco
+      buf[i++] = c; //guardar caracter y aumentar indice
+      HAL_UART_Transmit(&huart2, &c, 1, HAL_MAX_DELAY);   // eco, devolver por UART el mismo caracter que se acaba de recibir
     }
   }
-  buf[i] = '\0';   //cierra el texto
+  buf[i] = '\0';   //agregar caracter para cerrar texro
   UART_Print("\r\n");
 }
 
@@ -490,44 +505,47 @@ static void Mostrar_Menu(void)//imprime el menu principal
 
 /* Valida el formato "LED,TIEMPO". Retorna 1 si es valido, 0 si no */
 static uint8_t Parse_Comando(const char *s, uint8_t *led, uint16_t *tiempo)//Revisa que el comando sea valido
+																		   //s apunta el texto que se analizara
 {
-  uint32_t valor = 0;
-  uint8_t digitos = 0;
+  uint32_t valor = 0; //para construir los numeros encontrados en el texto
+  uint8_t digitos = 0; //cuenta cuantos digitos se encontraron
 
-  while (*s == ' ') s++;   //salta espacios al inicio
+  while (*s == ' ') s++;   //ignorar espacios al inicio
 
   /* --- numero de LED (1 digito) --- */
   while (*s >= '0' && *s <= '9')
   {
     valor = valor * 10 + (*s - '0');   //convierte el caracter a numero
-    s++;
-    if (++digitos > 1) return 0;
+    s++; //avanzar al siguiente caracter
+    if (++digitos > 1) //aumentar digitos y utilizar el nuevo valor
+    	return 0;      //Si hay mas de un digito, terminar la funcion
   }
-  if (digitos == 0 || valor < LED_MIN || valor > LED_MAX) return 0;
-  *led = (uint8_t)valor;
+  if (digitos == 0 || valor < LED_MIN || valor > LED_MAX) //si no se encontro ningun numero, el led es menor que 1 o mayor que 3
+	  return 0; //terminar la funcion
+  *led = (uint8_t)valor; //guardar led validado en la variable global
 
   /* --- coma separadora --- */
-  while (*s == ' ') s++;
-  if (*s != ',') return 0;
-  s++;
-  while (*s == ' ') s++;
+  while (*s == ' ') s++; //ignora espacion entre el LED y la coma
+  if (*s != ',') return 0; //comprueba que el caracter sea una coma
+  s++; //avanza despues de la coma
+  while (*s == ' ') s++; //ignora espacios despues de la coma
 
   /* --- tiempo en ms (max 5 digitos) --- */
-  valor = 0;
-  digitos = 0;
-  while (*s >= '0' && *s <= '9')
+  valor = 0; //reinicia variables, ya que ahora se usan para leer el tiempo
+  digitos = 0; //el numero del LED ya fue guardado en *led
+  while (*s >= '0' && *s <= '9') //leer todos los digitos del tiempo
   {
-    valor = valor * 10 + (*s - '0');
+    valor = valor * 10 + (*s - '0'); //construir el numero digito por digito
     s++;
-    if (++digitos > 5) return 0;
+    if (++digitos > 5) return 0; //rechaza si hay mas de 5 digitos
   }
-  if (digitos == 0) return 0;
+  if (digitos == 0) return 0; //comprueba que hayan valores escritos
 
-  while (*s == ' ') s++;
-  if (*s != '\0') return 0;          // no debe haber basura al final
+  while (*s == ' ') s++; //ignora espacios al final
+  if (*s != '\0') return 0;  // no debe haber basura al final
 
-  if (valor < TIEMPO_MIN || valor > TIEMPO_MAX) return 0;
-  *tiempo = (uint16_t)valor;
+  if (valor < TIEMPO_MIN || valor > TIEMPO_MAX) return 0; //comprobar que el tiempo esté entre 1 y 60000
+  *tiempo = (uint16_t)valor; //guaradar el valor del tiempo en la variable original
   return 1;
 }
 
@@ -558,12 +576,13 @@ static void Senal_Actualizar(uint16_t tiempo)
   __HAL_TIM_SET_COUNTER(&htim2, 0);
 }
 
-static void Submenu_SPI(void)////Pide el compando y lo valida
+// Solicita el comando LED,TIEMPO, lo valida, lo envía por SPI y actualiza TIM2.
+static void Submenu_SPI(void)
 {
-  char linea[RX_BUF_LEN];
-  char msg[64];
-  uint8_t led;
-  uint16_t tiempo;
+  char linea[RX_BUF_LEN]; //variable para guardar lo escrito por el usuario
+  char msg[64]; //64 caracteres para construir mensajes que contienen números.
+  uint8_t led; //guardar numero de led (1, 2 o 3)
+  uint16_t tiempo; //guardar tiempo en milisegundos (1 a 60000)
 
   while (1)
   {
@@ -571,18 +590,15 @@ static void Submenu_SPI(void)////Pide el compando y lo valida
     UART_Print("Formato: LED,TIEMPO_ms \r\n");
     UART_Print("LED: 1-3   Tiempo: 1-60000 ms   (0 = regresar)\r\n");
     UART_Print("> ");
-    UART_ReadLine(linea, sizeof(linea));//Lee lo que se escribe hasta presionar enter haceptando backspace y borrar.
+    UART_ReadLine(linea, sizeof(linea));//Lee lo que se escribe hasta presionar enter, aceptando backspace y borrar.
 
     if (strcmp(linea, "0") == 0) return;          // regresar al menu
 
-    if (!Parse_Comando(linea, &led, &tiempo))
+    if (!Parse_Comando(linea, &led, &tiempo)) //Si el comando no es válido...
     {
       UART_Print("Error: comando invalido. Intente de nuevo.\r\n"); //Manda el texto a la terminal
       continue;
     }
-
-    //parte 5: con el mismo comando se cambia el periodo de la senal cuadrada
-
 
     if (SPI_Enviar_Comando(led, tiempo) != HAL_OK)
     {
@@ -590,6 +606,7 @@ static void Submenu_SPI(void)////Pide el compando y lo valida
       return;
     }
 
+    //Utiliza el mismo tiempo ingresado para modificar la señal cuadrada de PA0.
     Senal_Actualizar(tiempo);
     snprintf(msg, sizeof(msg), "Senal cuadrada: %u ms alto / %u ms bajo\r\n", tiempo, tiempo);
     UART_Print(msg);

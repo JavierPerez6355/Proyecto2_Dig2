@@ -1,23 +1,23 @@
 #include <Arduino.h>
-#include <Wire.h>
-#include <LiquidCrystal.h>
-#include <ESP32SPISlave.h>
+#include <Wire.h> //proporciona la comunicación I2C
+#include <LiquidCrystal.h> //proporciona la comunicación con el LCD
+#include <ESP32SPISlave.h> //proporciona la comunicación SPI esclavo
 
 //******************************************/
 // Definiciones
 //******************************************/
-#define LED1 26
-#define LED2 2
-#define LED3 15
+#define LED1 26 //rojo
+#define LED2 2 //amarillo
+#define LED3 15 //verde
 
-#define DIRECCION_I2C 0x28
-#define pin_SDA 21
-#define pin_SCL 22
-#define pin_Pot 4
+#define DIRECCION_I2C 0x28 // Dirección del esclavo I2C
+#define pin_SDA 21 //datos
+#define pin_SCL 22 //reloj
+#define pin_Pot 4 //pin del potenciómetro
 
-#define rs 32
-#define en 33
-#define d4 27
+#define rs 32 //indica si se envía un comando o un dato al LCD
+#define en 33 //indica cuando el LCD debe leer los datos
+#define d4 27 //transportan la información de 4 bits al LCD
 #define d5 14
 #define d6 25
 #define d7 13
@@ -42,11 +42,11 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 uint8_t tx_buf[BUFFER_SIZE] __attribute__((aligned(4))) = {0};  // Datos que se envian al maestro
 uint8_t rx_buf[BUFFER_SIZE] __attribute__((aligned(4))) = {0};  // Datos que se reciben del maestro
 
-const uint8_t ledPins[3] = {LED1, LED2, LED3};
-const char inicialLed[3] = {'R', 'V', 'A'};
+const uint8_t ledPins[3] = {LED1, LED2, LED3}; // Array con los pines de los LEDs
+const char inicialLed[3] = {'R', 'A', 'V'}; // Array con las iniciales de los LEDs
 
 int ledActivo = -1;               // -1 = ningun LED encendido
-char ultimoLed = '-';
+char ultimoLed = '-';             // Almacena la inicial del último LED encendido
 
 unsigned long tInicio = 0;        // Momento en que se encendio el LED
 unsigned long tDuracion = 0;      // Tiempo que debe permanecer encendido
@@ -55,22 +55,22 @@ unsigned long tDuracion = 0;      // Tiempo que debe permanecer encendido
 // Variables ADC e I2C
 //******************************************/
 
-uint8_t respuesta[4] = {0, 0, 0, 0};
+uint8_t respuesta[4] = {0, 0, 0, 0}; // Array que contiene la respuesta del esclavo I2C: [0][ADC][mV_H][mV_L]
 
-uint16_t valorPot = 0;
-uint8_t valorADC8 = 0;
-uint32_t milivoltios = 0;
+uint16_t valorPot = 0; // Valor leído del potenciómetro
+uint8_t valorADC8 = 0; // Valor del potenciómetro mapeado a 8 bits (0-255)
+uint32_t milivoltios = 0; // Valor del potenciómetro en milivoltios
 
-unsigned long tiempoAnterior = 0;
+unsigned long tiempoAnterior = 0; // Variable para controlar el tiempo de actualización de la medición y la respuesta I2C
 
 //******************************************/
 // Prototipos
 //******************************************/
 
-void enviarDato();
-void procesarTrama();
-void apagarLeds();
-void actualizarRespuestaI2C();
+void enviarDato(); // Responde a la solicitud de datos del maestro I2C
+void procesarTrama(); // Lee la trama recibida por SPI y enciende el LED indicado
+void apagarLeds(); // Apaga los 3 LEDs
+void actualizarRespuestaI2C(); // Actualiza la medición del potenciómetro y la respuesta I2C
 
 //******************************************/
 // Configuración
@@ -78,7 +78,7 @@ void actualizarRespuestaI2C();
 
 void setup() {
 
-Serial.begin(115200);
+Serial.begin(115200); // Inicia la comunicación serial
 
 //configuracion del LCD
 lcd.begin(16, 2);
@@ -89,8 +89,8 @@ lcd.setCursor(0, 1);
 lcd.print("ESP32");
 
 //configuracion del ADC
-analogReadResolution(12);
-analogSetPinAttenuation(pin_Pot, ADC_11db);
+analogReadResolution(12); // Configura la resolución de lectura del ADC a 12 bits (0-4095)
+analogSetPinAttenuation(pin_Pot, ADC_11db); // Configura la atenuación del pin del potenciómetro a 11 dB para un rango de 0 a 3.3V
 
 //Primera lectura del potenciómetro
 
@@ -107,10 +107,11 @@ for (int i = 0; i < 3; i++) {
 slave.setDataMode(SPI_MODE0);  // Configurar el modo SPI (puede ser SPI_MODE0, SPI_MODE1, SPI_MODE2 o SPI_MODE3)
 slave.setQueueSize(QUEUE_SIZE);  // Configurar el tamaño de la cola de mensajes
 
+// Iniciar el esclavo SPI en el bus VSPI (puede ser HSPI o VSPI)
 if (slave.begin(VSPI)) {
     Serial.println("ESP32 iniciado como esclavo SPI");
     Serial.print("MOSI pin: ");
-    Serial.println(MOSI);
+    Serial.println(MOSI); 
     Serial.print("MISO pin: ");
     Serial.println(MISO);
     Serial.print("SCK pin: ");
@@ -124,12 +125,13 @@ if (slave.begin(VSPI)) {
 // configuracion del esclavo I2C
 Wire.onRequest(enviarDato);
 
+// Inicia el esclavo I2C con la dirección especificada y los pines SDA y SCL
 bool iniciado = Wire.begin((uint8_t)DIRECCION_I2C, pin_SDA, pin_SCL, 100000);
 
 if (iniciado)
 {
-    Wire.slaveWrite(respuesta, sizeof(respuesta));
-    Serial.println("ESP32 iniciado como esclavo I2C");
+    Wire.slaveWrite(respuesta, sizeof(respuesta)); // Envía la respuesta inicial al maestro I2C
+    Serial.println("ESP32 iniciado como esclavo I2C"); 
 }
 else
 {
@@ -162,9 +164,9 @@ void loop()
 
     //interpreta el comando recibido
 
-    auto bytesRecibidos = slave.numBytesReceivedAll();
+    auto bytesRecibidos = slave.numBytesReceivedAll(); // Obtiene el número de bytes recibidos en todas las transacciones completadas
 
-    if (!bytesRecibidos.empty() && bytesRecibidos[0] == BUFFER_SIZE) {
+    if (!bytesRecibidos.empty() && bytesRecibidos[0] == BUFFER_SIZE) { // Verifica si se recibieron 4 bytes
         procesarTrama();
     } 
     else 
@@ -186,24 +188,24 @@ void loop()
     Serial.print(ledActivo + 1);
     Serial.println(" apagado");
 
-    ledActivo = -1;
+    ledActivo = -1; //ningun LED encendido
   }
-//Actualizar ADC, I2C y LCD cada 100 ms
+    //Actualizar ADC, I2C y LCD cada 100 ms
 
-    unsigned long tiempoActual = millis();
+    unsigned long tiempoActual = millis(); // Obtener el tiempo actual en milisegundos
 
-    if (tiempoActual - tiempoAnterior >= 100)
+    if (tiempoActual - tiempoAnterior >= 100) // Verificar si han pasado 100 ms desde la última actualización
     {
-        tiempoAnterior = tiempoActual;
+        tiempoAnterior = tiempoActual; // Actualizar el tiempo anterior
 
-        actualizarRespuestaI2C();
-        Wire.slaveWrite(respuesta, sizeof(respuesta));
+        actualizarRespuestaI2C(); // Actualizar la medición del potenciómetro y la respuesta I2C
+        Wire.slaveWrite(respuesta, sizeof(respuesta)); // Enviar la respuesta al maestro I2C
 
-        Serial.printf("ADC: %u\n", (unsigned int)valorADC8);
+        Serial.printf("ADC: %u\n", (unsigned int)valorADC8); 
         Serial.printf("mV: %u\n", (unsigned int)milivoltios);
 
-        char linea1[17];
-        char linea2[17];
+        char linea1[17]; // Variable para almacenar la primera línea del LCD
+        char linea2[17]; // Variable para almacenar la segunda línea del LCD
 
         snprintf(linea1, sizeof(linea1), "P1:%lu.%03luV", (unsigned long)(milivoltios / 1000), (unsigned long)(milivoltios % 1000));
         snprintf(linea2, sizeof(linea2), "ADC:%4u LED:%c", (unsigned int)valorADC8, ultimoLed); 
@@ -216,7 +218,7 @@ void loop()
         lcd.print(linea2);
         lcd.print("  ");
     }
-}
+  }
 
 //******************************************/
 // Actualizar medición y respuesta I2C
@@ -224,14 +226,14 @@ void loop()
 
 void actualizarRespuestaI2C()
 {
-        valorPot = analogRead(pin_Pot);
-        valorADC8 = map(valorPot, 0, 4095, 0, 255);
-        milivoltios = analogReadMilliVolts(pin_Pot);
+        valorPot = analogRead(pin_Pot); 
+        valorADC8 = map(valorPot, 0, 4095, 0, 255); // Mapea el valor del potenciómetro a un rango de 0 a 255
+        milivoltios = analogReadMilliVolts(pin_Pot); // Convierte el valor del potenciómetro a milivoltios
 
-        respuesta[0] = 0;
-        respuesta[1] = valorADC8;
-        respuesta[2] = (uint8_t)(milivoltios >> 8);
-        respuesta[3] = (uint8_t)(milivoltios & 0xFF);
+        respuesta[0] = 0; 
+        respuesta[1] = valorADC8; // Almacena el valor del potenciómetro mapeado a 8 bits en la respuesta I2C
+        respuesta[2] = (uint8_t)(milivoltios >> 8); // Almacena los bits más significativos de los milivoltios en la respuesta I2C
+        respuesta[3] = (uint8_t)(milivoltios & 0xFF); // Almacena los bits menos significativos de los milivoltios en la respuesta I2C
 }
 
 
@@ -244,19 +246,19 @@ void actualizarRespuestaI2C()
 
 void enviarDato()
 {
-    Wire.write(respuesta, sizeof(respuesta));
+    Wire.write(respuesta, sizeof(respuesta)); // Envía la respuesta al maestro I2C
 }
 
 // Revisa la trama recibida y enciende el LED indicado
 void procesarTrama() {
   //verificar el encabezado
-  if (rx_buf[0] != SPI_HEADER) {
+  if (rx_buf[0] != SPI_HEADER) { // Verifica si el encabezado es correcto
     Serial.println("Trama invalida: encabezado incorrecto");
     return;
   }
 
-  uint8_t led = rx_buf[1];
-  uint16_t tiempo = ((uint16_t)rx_buf[2] << 8) | rx_buf[3];
+  uint8_t led = rx_buf[1]; // Obtiene el número de LED del segundo byte de la trama
+  uint16_t tiempo = ((uint16_t)rx_buf[2] << 8) | rx_buf[3]; // Combina los bytes 2 y 3 de la trama para obtener el tiempo en milisegundos
 
   //Muestra el dato recibido.
   Serial.print("Dato recibido -> LED: ");
@@ -275,12 +277,12 @@ void procesarTrama() {
   //encender el LED indicado
   apagarLeds();
 
-  ledActivo = led - 1;
-  ultimoLed = inicialLed[ledActivo];
-  tDuracion = tiempo;
-  tInicio = millis();
+  ledActivo = led - 1; // Ajusta el índice del LED activo (0, 1 o 2)
+  ultimoLed = inicialLed[ledActivo]; // Actualiza la inicial del último LED encendido
+  tDuracion = tiempo; // Establece la duración del encendido del LED
+  tInicio = millis(); // Registra el momento en que se encendió el LED
 
-  digitalWrite(ledPins[ledActivo], HIGH);
+  digitalWrite(ledPins[ledActivo], HIGH); // Enciende el LED correspondiente
 
   Serial.print("Encendiendo LED ");
   Serial.println(led);
@@ -296,5 +298,5 @@ void apagarLeds(void) {
   for (int i = 0; i < 3; i++) {
     digitalWrite(ledPins[i], LOW);
   }
-  ledActivo = -1;
+  ledActivo = -1; //ningun LED encendido
 }
